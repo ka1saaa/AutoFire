@@ -34,6 +34,8 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 产物位于 `release\\AutoFire\\`，并会同时生成 `release\\AutoFire-windows-x64.zip`。用户下载压缩包、解压并双击 `AutoFire.exe` 即可运行。
 
+当前仓库的现成 Windows 发布包在 [`downloads/AutoFire-windows-x64.zip`](downloads/AutoFire-windows-x64.zip)。
+
 ## 数据与隐私
 
 不要将 `%LOCALAPPDATA%\\AutoFire` 内的数据库或日志上传到 GitHub。仓库的 `.gitignore` 已排除常见本地数据文件，但发布前仍应检查提交内容。
