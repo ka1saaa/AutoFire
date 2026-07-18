@@ -63,14 +63,14 @@ class AutoFireApp:
             text="每日互动提醒与联系人偏好管理 · 登录和最终发送均由用户在官方网页手动完成",
         ).pack(anchor=tk.W, pady=(0, 12))
 
-        notebook = ttk.Notebook(container)
-        notebook.pack(fill=tk.BOTH, expand=True)
-        self.home_tab = ttk.Frame(notebook, padding=12)
-        self.contacts_tab = ttk.Frame(notebook, padding=12)
-        self.preview_tab = ttk.Frame(notebook, padding=12)
-        notebook.add(self.home_tab, text="启动与提醒")
-        notebook.add(self.contacts_tab, text="联系人")
-        notebook.add(self.preview_tab, text="本次预览")
+        self.notebook = ttk.Notebook(container)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+        self.home_tab = ttk.Frame(self.notebook, padding=12)
+        self.contacts_tab = ttk.Frame(self.notebook, padding=12)
+        self.preview_tab = ttk.Frame(self.notebook, padding=12)
+        self.notebook.add(self.home_tab, text="启动与提醒")
+        self.notebook.add(self.contacts_tab, text="联系人")
+        self.notebook.add(self.preview_tab, text="本次预览")
 
         self._build_home_tab()
         self._build_contacts_tab()
@@ -97,6 +97,20 @@ class AutoFireApp:
         ttk.Label(frame, text=note, justify=tk.LEFT).grid(row=4, column=0, columnspan=3, sticky=tk.W, pady=(24, 8))
         ttk.Button(frame, text="检查环境", command=self.check_environment).grid(row=5, column=0, sticky=tk.W)
         ttk.Button(frame, text="生成本次表情预览", command=self.generate_plan).grid(row=5, column=1, sticky=tk.W, padx=8)
+        ttk.Separator(frame).grid(row=6, column=0, columnspan=3, sticky=tk.EW, pady=18)
+        ttk.Label(frame, text="网页打开后的操作", font=("Microsoft YaHei UI", 11, "bold")).grid(
+            row=7, column=0, columnspan=3, sticky=tk.W
+        )
+        ttk.Label(
+            frame,
+            text="1. 在 Edge 中自行登录并点击“消息”；2. 回到此处点击“我已登录，管理联系人”；"
+            "3. 录入/导入可私信好友后生成表情预览。",
+            justify=tk.LEFT,
+            wraplength=720,
+        ).grid(row=8, column=0, columnspan=2, sticky=tk.W, pady=(6, 10))
+        ttk.Button(frame, text="我已登录，管理联系人", command=self.start_after_login).grid(
+            row=8, column=2, sticky=tk.E
+        )
         frame.columnconfigure(1, weight=1)
 
     def _build_contacts_tab(self) -> None:
@@ -110,6 +124,7 @@ class AutoFireApp:
         ttk.Button(toolbar, text="从剪贴板导入", command=self.import_clipboard).pack(side=tk.LEFT, padx=3)
         ttk.Button(toolbar, text="全选", command=lambda: self.set_visible_selected(True)).pack(side=tk.LEFT, padx=3)
         ttk.Button(toolbar, text="取消全选", command=lambda: self.set_visible_selected(False)).pack(side=tk.LEFT, padx=3)
+        ttk.Button(toolbar, text="下一步：生成预览", command=self.generate_plan).pack(side=tk.LEFT, padx=12)
         ttk.Button(toolbar, text="编辑", command=self.edit_contact_dialog).pack(side=tk.RIGHT, padx=3)
         ttk.Button(toolbar, text="删除", command=self.delete_contact).pack(side=tk.RIGHT, padx=3)
 
@@ -173,7 +188,11 @@ class AutoFireApp:
             messagebox.showerror(APP_NAME, f"无法打开浏览器：{error}")
             return
         self.logger.info("Opened user-selected website: %s", url)
-        self.status_var.set("已打开网页，请自行完成登录并处理验证码。")
+        self.status_var.set("已打开网页：请自行登录、点击“消息”，完成后回到本程序点击“我已登录，管理联系人”。")
+
+    def start_after_login(self) -> None:
+        self.notebook.select(self.contacts_tab)
+        self.status_var.set("请录入或从剪贴板导入可私信好友，勾选后点击“下一步：生成预览”。")
 
     def check_environment(self) -> None:
         checks = [
@@ -331,6 +350,7 @@ class AutoFireApp:
             self.preview_tree.delete(item)
         for contact, emoji in self.plan:
             self.preview_tree.insert("", tk.END, values=(contact.label, emoji))
+        self.notebook.select(self.preview_tab)
         self.status_var.set(f"已生成 {len(self.plan)} 位联系人的表情预览。")
         if self.store.needs_selection_confirmation():
             summary = "\n".join(f"• {contact.label}：{emoji}" for contact, emoji in self.plan)
