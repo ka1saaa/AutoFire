@@ -1,0 +1,25 @@
+# Python build and cache files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.spec
+
+# Local AutoFire data must never be committed
+data/
+log/
+*.log
+*.db
+release/
+AutoFire-windows-x64.zip
+
+# User-provided screenshots may contain private account or chat content
+1.png
+2.png
+
+# Editor / OS files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
