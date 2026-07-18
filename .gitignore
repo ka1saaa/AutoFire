@@ -12,7 +12,7 @@ log/
 *.log
 *.db
 release/
-AutoFire-windows-x64.zip
+/AutoFire-windows-x64.zip
 
 # User-provided screenshots may contain private account or chat content
 1.png
