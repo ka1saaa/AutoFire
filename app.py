@@ -126,7 +126,7 @@ class AutoFireApp:
         ttk.Button(toolbar, text="取消全选", command=lambda: self.set_visible_selected(False)).pack(side=tk.LEFT, padx=3)
         ttk.Button(toolbar, text="下一步：生成预览", command=self.generate_plan).pack(side=tk.LEFT, padx=12)
         ttk.Button(toolbar, text="编辑", command=self.edit_contact_dialog).pack(side=tk.RIGHT, padx=3)
-        ttk.Button(toolbar, text="删除", command=self.delete_contact).pack(side=tk.RIGHT, padx=3)
+        ttk.Button(toolbar, text="🗑", width=3, command=self.delete_contact).pack(side=tk.RIGHT, padx=3)
 
         columns = ("selected", "nickname", "remark", "updated")
         self.contact_tree = ttk.Treeview(self.contacts_tab, columns=columns, show="headings", selectmode="extended")
