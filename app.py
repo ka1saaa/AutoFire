@@ -97,18 +97,22 @@ class AutoFireApp:
         ttk.Label(frame, text=note, justify=tk.LEFT).grid(row=4, column=0, columnspan=3, sticky=tk.W, pady=(24, 8))
         ttk.Button(frame, text="检查环境", command=self.check_environment).grid(row=5, column=0, sticky=tk.W)
         ttk.Button(frame, text="生成本次表情预览", command=self.generate_plan).grid(row=5, column=1, sticky=tk.W, padx=8)
+        ttk.Button(frame, text="切到联系人页", command=self.switch_to_contacts).grid(row=5, column=2, sticky=tk.E)
         ttk.Separator(frame).grid(row=6, column=0, columnspan=3, sticky=tk.EW, pady=18)
         ttk.Label(frame, text="网页打开后的操作", font=("Microsoft YaHei UI", 11, "bold")).grid(
             row=7, column=0, columnspan=3, sticky=tk.W
         )
         ttk.Label(
             frame,
-            text="1. 在 Edge 中自行登录并点击“消息”；2. 回到此处点击“我已登录，管理联系人”；"
-            "3. 录入/导入可私信好友后生成表情预览。",
+            text=(
+                "1. 点击上方按钮用 Edge 打开抖音，登录后把鼠标停在右上角“消息”入口并打开消息面板。\n"
+                "2. 抖音消息面板鼠标离开会自动收起，所以联系人选择和最终发送请在官方网页内手动完成。\n"
+                "3. 回到 AutoFire 点击“切到联系人页”，勾选联系人后生成预览，再复制本次清单照着处理。"
+            ),
             justify=tk.LEFT,
             wraplength=720,
         ).grid(row=8, column=0, columnspan=2, sticky=tk.W, pady=(6, 10))
-        ttk.Button(frame, text="我已登录，管理联系人", command=self.start_after_login).grid(
+        ttk.Button(frame, text="我已打开消息，进入联系人页", command=self.start_after_login).grid(
             row=8, column=2, sticky=tk.E
         )
         frame.columnconfigure(1, weight=1)
@@ -160,8 +164,9 @@ class AutoFireApp:
         buttons = ttk.Frame(self.preview_tab)
         buttons.pack(fill=tk.X, pady=10)
         ttk.Button(buttons, text="重新随机", command=self.generate_plan).pack(side=tk.LEFT)
-        ttk.Button(buttons, text="复制表情清单", command=self.copy_plan).pack(side=tk.LEFT, padx=6)
+        ttk.Button(buttons, text="复制本次清单", command=self.copy_plan).pack(side=tk.LEFT, padx=6)
         ttk.Button(buttons, text="确认联系人清单", command=self.confirm_selection).pack(side=tk.LEFT, padx=6)
+        ttk.Button(buttons, text="切到联系人页", command=self.switch_to_contacts).pack(side=tk.LEFT, padx=6)
         ttk.Button(buttons, text="记录本次已手动处理", command=self.record_manual_completion).pack(side=tk.RIGHT)
 
     def _save_url(self) -> str | None:
@@ -188,11 +193,14 @@ class AutoFireApp:
             messagebox.showerror(APP_NAME, f"无法打开浏览器：{error}")
             return
         self.logger.info("Opened user-selected website: %s", url)
-        self.status_var.set("已打开网页：请自行登录、点击“消息”，完成后回到本程序点击“我已登录，管理联系人”。")
+        self.status_var.set("已打开网页：登录并打开“消息”面板后，回到本程序点击“我已打开消息，进入联系人页”。")
 
     def start_after_login(self) -> None:
+        self.switch_to_contacts()
+
+    def switch_to_contacts(self) -> None:
         self.notebook.select(self.contacts_tab)
-        self.status_var.set("请录入或从剪贴板导入可私信好友，勾选后点击“下一步：生成预览”。")
+        self.status_var.set("请在联系人页勾选本次要处理的好友，完成后点击“下一步：生成预览”。")
 
     def check_environment(self) -> None:
         checks = [
@@ -372,8 +380,9 @@ class AutoFireApp:
 
     def copy_plan(self) -> None:
         if not self.plan:
-            messagebox.showinfo(APP_NAME, "请先生成本次预览。")
-            return
+            self.generate_plan()
+            if not self.plan:
+                return
         lines = [f"{contact.label}：{emoji}" for contact, emoji in self.plan]
         self.root.clipboard_clear()
         self.root.clipboard_append("\n".join(lines))
@@ -382,8 +391,6 @@ class AutoFireApp:
     def record_manual_completion(self) -> None:
         if not self.plan:
             messagebox.showinfo(APP_NAME, "请先生成本次预览。")
-            return
-        if not messagebox.askyesno(APP_NAME, "确认已在网页内自行完成本次互动并记录吗？"):
             return
         details = "; ".join(f"{contact.label}:{emoji}" for contact, emoji in self.plan)
         self.store.record_run(len(self.plan), "manual_completion", details)
