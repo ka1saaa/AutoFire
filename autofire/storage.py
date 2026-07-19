@@ -125,6 +125,11 @@ class Store:
         with self._connect() as conn:
             conn.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
 
+    def delete_all_contacts(self) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM contacts")
+        self.confirm_current_selection()
+
     def set_selected(self, ids: list[int], selected: bool) -> None:
         if not ids:
             return

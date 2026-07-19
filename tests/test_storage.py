@@ -31,6 +31,19 @@ class StoreTests(unittest.TestCase):
             self.assertEqual(store.get_setting("reminder_time"), "08:30")
             store.record_run(2, "manual_completion", "example")
 
+    def test_delete_all_contacts_clears_selection_confirmation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = Store(Path(directory) / "autofire.db")
+            store.add_contact("小王")
+            store.add_contact("小李")
+            store.set_selected([item.id for item in store.list_contacts()], True)
+            store.confirm_current_selection()
+
+            store.delete_all_contacts()
+
+            self.assertEqual(store.list_contacts(), [])
+            self.assertFalse(store.needs_selection_confirmation())
+
 
 if __name__ == "__main__":
     unittest.main()

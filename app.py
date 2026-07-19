@@ -127,6 +127,7 @@ class AutoFireApp:
         search.bind("<KeyRelease>", lambda _event: self.refresh_contacts())
         ttk.Button(toolbar, text="编辑", command=self.edit_contact_dialog).pack(side=tk.RIGHT, padx=3)
         ttk.Button(toolbar, text="🗑", width=3, command=self.delete_contact).pack(side=tk.RIGHT, padx=3)
+        ttk.Button(toolbar, text="清空全部", command=self.delete_all_contacts).pack(side=tk.RIGHT, padx=3)
 
         actionbar = ttk.Frame(self.contacts_tab)
         actionbar.pack(fill=tk.X, pady=(0, 8))
@@ -331,6 +332,21 @@ class AutoFireApp:
             self.store.delete_contact(contact_id)
         self.logger.info("Deleted %d local contact preference(s)", len(ids))
         self.refresh_contacts()
+
+    def delete_all_contacts(self) -> None:
+        count = len(self.store.list_contacts())
+        if not count:
+            messagebox.showinfo(APP_NAME, "当前没有可删除的联系人。")
+            return
+        if not messagebox.askyesno(APP_NAME, f"确定删除全部 {count} 位联系人吗？此操作只清空本地联系人列表。"):
+            return
+        self.store.delete_all_contacts()
+        self.plan = []
+        for item in self.preview_tree.get_children():
+            self.preview_tree.delete(item)
+        self.logger.info("Deleted all local contact preferences (%d contacts)", count)
+        self.refresh_contacts()
+        self.status_var.set(f"已删除全部 {count} 位联系人。")
 
     def import_clipboard(self) -> None:
         try:
