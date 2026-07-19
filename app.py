@@ -9,11 +9,12 @@ import sys
 import tkinter as tk
 import webbrowser
 from pathlib import Path
-from tkinter import messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from urllib.parse import urlparse
 
 from autofire import APP_NAME, APP_VERSION
 from autofire.logging_setup import configure_logging
+from autofire.ocr import OCRError, extract_contact_candidates
 from autofire.paths import app_data_dir, database_path
 from autofire.scheduler import configure_daily_reminder, remove_daily_reminder
 from autofire.storage import Contact, Store
@@ -126,6 +127,7 @@ class AutoFireApp:
         search.bind("<KeyRelease>", lambda _event: self.refresh_contacts())
         ttk.Button(toolbar, text="新增", command=self.add_contact_dialog).pack(side=tk.LEFT, padx=3)
         ttk.Button(toolbar, text="从剪贴板导入", command=self.import_clipboard).pack(side=tk.LEFT, padx=3)
+        ttk.Button(toolbar, text="从截图识别", command=self.import_image_contacts).pack(side=tk.LEFT, padx=3)
         ttk.Button(toolbar, text="全选", command=lambda: self.set_visible_selected(True)).pack(side=tk.LEFT, padx=3)
         ttk.Button(toolbar, text="取消全选", command=lambda: self.set_visible_selected(False)).pack(side=tk.LEFT, padx=3)
         ttk.Button(toolbar, text="下一步：生成预览", command=self.generate_plan).pack(side=tk.LEFT, padx=12)
@@ -146,7 +148,7 @@ class AutoFireApp:
         self.contact_tree.bind("<Double-1>", self.toggle_clicked_contact)
         ttk.Label(
             self.contacts_tab,
-            text="双击联系人行可切换勾选。导入格式：每行“昵称”或“昵称|备注”。联系人由用户自行从可私信好友列表录入。",
+            text="双击联系人行可切换勾选。导入格式：每行“昵称”或“昵称|备注”。截图识别结果需确认后才会导入。",
         ).pack(anchor=tk.W, pady=(8, 0))
 
     def _build_preview_tab(self) -> None:
@@ -333,6 +335,61 @@ class AutoFireApp:
         except tk.TclError:
             messagebox.showinfo(APP_NAME, "剪贴板中没有可导入的文本。")
             return
+        added = self.import_contact_lines(raw)
+        messagebox.showinfo(APP_NAME, f"已导入 {added} 位联系人。")
+
+    def import_image_contacts(self) -> None:
+        image_path = filedialog.askopenfilename(
+            title="选择联系人截图",
+            filetypes=(
+                ("图片文件", "*.png *.jpg *.jpeg *.bmp *.tif *.tiff"),
+                ("所有文件", "*.*"),
+            ),
+        )
+        if not image_path:
+            return
+        self.status_var.set("正在识别截图中的联系人文字，请稍候。")
+        self.root.update_idletasks()
+        try:
+            candidates = extract_contact_candidates(Path(image_path))
+        except OCRError as error:
+            self.logger.error("OCR import failed: %s", error)
+            messagebox.showerror(APP_NAME, f"截图识别失败：\n\n{error}")
+            self.status_var.set("截图识别失败，请换一张更清晰的截图或使用剪贴板导入。")
+            return
+        if not candidates:
+            messagebox.showinfo(APP_NAME, "没有从截图中识别到可导入的联系人。")
+            self.status_var.set("没有识别到联系人，请换一张更清晰的截图。")
+            return
+        self.confirm_ocr_import(candidates)
+
+    def confirm_ocr_import(self, candidates: list[str]) -> None:
+        dialog = tk.Toplevel(self.root)
+        dialog.title("确认截图识别结果")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.geometry("460x420")
+        dialog.minsize(420, 320)
+
+        ttk.Label(dialog, text="请检查识别结果。每行保留一个联系人，也可以改成“昵称|备注”。").pack(
+            anchor=tk.W, padx=12, pady=(12, 6)
+        )
+        text = tk.Text(dialog, height=14, wrap=tk.WORD)
+        text.pack(fill=tk.BOTH, expand=True, padx=12, pady=6)
+        text.insert("1.0", "\n".join(candidates))
+        buttons = ttk.Frame(dialog)
+        buttons.pack(fill=tk.X, padx=12, pady=(6, 12))
+
+        def save() -> None:
+            raw = text.get("1.0", tk.END)
+            added = self.import_contact_lines(raw)
+            dialog.destroy()
+            messagebox.showinfo(APP_NAME, f"已导入 {added} 位联系人。")
+
+        ttk.Button(buttons, text="取消", command=dialog.destroy).pack(side=tk.RIGHT)
+        ttk.Button(buttons, text="确认导入", command=save).pack(side=tk.RIGHT, padx=6)
+
+    def import_contact_lines(self, raw: str) -> int:
         added = 0
         for line in raw.splitlines():
             line = line.strip()
@@ -346,7 +403,8 @@ class AutoFireApp:
                 continue
         self.refresh_contacts()
         self.logger.info("Imported %d local contact preference(s)", added)
-        messagebox.showinfo(APP_NAME, f"已导入 {added} 位联系人。")
+        self.status_var.set(f"已导入 {added} 位联系人。")
+        return added
 
     def generate_plan(self) -> None:
         contacts = self.store.selected_contacts()
