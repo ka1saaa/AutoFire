@@ -121,7 +121,7 @@ class AutoFireApp:
         toolbar = ttk.Frame(self.contacts_tab)
         toolbar.pack(fill=tk.X, pady=(0, 8))
         ttk.Label(toolbar, text="搜索").pack(side=tk.LEFT)
-        search = ttk.Entry(toolbar, textvariable=self.search_var, width=28)
+        search = ttk.Entry(toolbar, textvariable=self.search_var, width=18)
         search.pack(side=tk.LEFT, padx=6)
         search.bind("<KeyRelease>", lambda _event: self.refresh_contacts())
         ttk.Button(toolbar, text="新增", command=self.add_contact_dialog).pack(side=tk.LEFT, padx=3)
